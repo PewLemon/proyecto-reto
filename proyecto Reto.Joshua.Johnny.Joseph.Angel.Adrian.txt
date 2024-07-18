@@ -1,0 +1,218 @@
+using System;
+using System.Collections.Generic;
+
+public class Player
+{
+    public string Name { get; }
+    public int Position { get; private set; }
+    public int Coins { get; private set; }
+    public string Language { get; }
+
+    public Player(string name, string language)
+    {
+        Name = name;
+        Position = 0;
+        Coins = 5;
+        Language = language;
+    }
+
+    public void Move()
+    {
+        Random random = new Random();
+        int steps = random.Next(1, 7); // roll a dice to determine steps
+        Position += steps;
+
+        DisplayMoveMessage(steps);
+    }
+
+    public void Challenge(Player otherPlayer)
+    {
+        if (Coins >= 1)
+        {
+            Coins -= 1;
+
+            Random random = new Random();
+            bool result = random.Next(0, 2) == 0; // Simulating the result of the challenge
+            int lostSteps = random.Next(1, 5); // Random steps to move back
+
+            HandleChallengeResult(otherPlayer, result, lostSteps);
+        }
+        else
+        {
+            DisplayInsufficientCoinsMessage();
+        }
+    }
+
+    private void DisplayMoveMessage(int steps)
+    {
+        string actionDescription = Language == "English" ? "moved" : "se movió";
+        Console.WriteLine($"{Name} {actionDescription} {steps} steps and is now at position {Position}");
+    }
+
+    private void HandleChallengeResult(Player otherPlayer, bool result, int lostSteps)
+    {
+        if (result)
+        {
+            WinChallenge(otherPlayer, lostSteps);
+        }
+        else
+        {
+            LoseChallenge(otherPlayer, lostSteps);
+        }
+    }
+
+    private void WinChallenge(Player otherPlayer, int lostSteps)
+    {
+        Coins += 2;
+        otherPlayer.Position -= lostSteps;
+
+        string winMessage = Language == "English" ? "won the challenge" : "ganó el desafío";
+        Console.WriteLine($"{Name} {winMessage} and gained 2 coins!");
+        Console.WriteLine($"{otherPlayer.Name} moves back {lostSteps} steps.");
+    }
+
+    private void LoseChallenge(Player otherPlayer, int lostSteps)
+    {
+        otherPlayer.Coins += 1;
+        Position -= lostSteps;
+
+        string loseMessage = Language == "English" ? "lost the challenge" : "perdió el desafío";
+        Console.WriteLine($"{Name} {loseMessage}. {otherPlayer.Name} gained 1 coin!");
+        Console.WriteLine($"{Name} moves back {lostSteps} steps.");
+    }
+
+    private void DisplayInsufficientCoinsMessage()
+    {
+        string insufficientCoinsMsg = Language == "English" ? "doesn't have enough coins to challenge." : "no tiene suficientes monedas para desafiar.";
+        Console.WriteLine($"{Name} {insufficientCoinsMsg}");
+    }
+
+    public bool HasWon()
+    {
+        return Position >= 12;
+    }
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine("Choose your language: [E]nglish / [S]panish");
+        string languageChoice = Console.ReadLine().Trim().ToLower();
+
+        string language = (languageChoice == "e") ? "English" : "Spanish";
+
+        List<Player> players = new List<Player>();
+        for (int i = 0; i < 4; i++)
+        {
+            players.Add(new Player($"Player {i + 1}", language));
+        }
+
+        int turnCount = 0;
+        bool phantomAwoken = false;
+
+        while (true)
+        {
+            foreach (var player in players)
+            {
+                DisplayPlayerStatus(player);
+
+                if (turnCount % 3 == 0 && !phantomAwoken)
+                {
+                    DisplayPhantomAwokenMessage(language);
+                    phantomAwoken = true;
+                }
+
+                HandlePlayerAction(player, players, language);
+
+                if (player.HasWon())
+                {
+                    DisplayWinMessage(player, language);
+                    return;
+                }
+
+                if (phantomAwoken)
+                    phantomAwoken = false;
+
+                turnCount++;
+            }
+        }
+    }
+
+    private static void DisplayPlayerStatus(Player player)
+    {
+        Console.WriteLine($"\n{player.Name}'s turn:");
+        Console.WriteLine($"Position: {player.Position}, Coins: {player.Coins}");
+    }
+
+    private static void DisplayPhantomAwokenMessage(string language)
+    {
+        string message = language == "English" ? "\nThe phantom has awoken! A random challenge appears!" : "\n¡El fantasma ha despertado! ¡Aparece un desafío aleatorio!";
+        Console.WriteLine(message);
+    }
+
+    private static void HandlePlayerAction(Player player, List<Player> players, string language)
+    {
+        while (true)
+        {
+            DisplayActionPrompt(language);
+
+            string action = Console.ReadLine().Trim().ToLower();
+
+            if (action == "m")
+            {
+                player.Move();
+                break;
+            }
+            else if (action == "c" || action == "d")
+            {
+                HandleChallengeAction(player, players, language);
+                break;
+            }
+            else
+            {
+                DisplayInvalidActionMessage(language);
+            }
+        }
+    }
+
+    private static void DisplayActionPrompt(string language)
+    {
+        string prompt = language == "English" ? "Choose action: [m]ove or [c]hallenge: " : "Elige acción: [m]over o [d]esafiar: ";
+        Console.WriteLine(prompt);
+    }
+
+    private static void HandleChallengeAction(Player player, List<Player> players, string language)
+    {
+        Console.WriteLine("Enter player number to challenge (1-4): ");
+        int targetPlayer;
+        bool isValidInput = int.TryParse(Console.ReadLine().Trim(), out targetPlayer);
+
+        if (isValidInput && targetPlayer >= 1 && targetPlayer <= 4 && targetPlayer != players.IndexOf(player) + 1)
+        {
+            player.Challenge(players[targetPlayer - 1]);
+        }
+        else
+        {
+            DisplayInvalidPlayerNumberMessage(language);
+        }
+    }
+
+    private static void DisplayInvalidPlayerNumberMessage(string language)
+    {
+        string message = language == "English" ? "Invalid player number. Please enter a number between 1 and 4." : "Número de jugador inválido. Ingresa un número entre 1 y 4.";
+        Console.WriteLine(message);
+    }
+
+    private static void DisplayInvalidActionMessage(string language)
+    {
+        string message = language == "English" ? "Invalid action. Try again." : "Acción inválida. Intenta de nuevo.";
+        Console.WriteLine(message);
+    }
+
+    private static void DisplayWinMessage(Player player, string language)
+    {
+        string winMessage = language == "English" ? $"\nCongratulations! {player.Name} has won!" : $"\n¡Felicidades! ¡{player.Name} ha ganado!";
+        Console.WriteLine(winMessage);
+    }
+}
